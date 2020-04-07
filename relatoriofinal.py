@@ -15,17 +15,17 @@
 from sys import argv, exit 
 from unidecode import unidecode
 import getopt
-import csv
+import pandas as pd
 
 ## Function that prints help list with args
 def help():
     print(
         '''Uso: python3 <options> <spp> <s1>
         
-        Programa que faz a comparação entre os nomes na 3a coluna
-        de um arquivo csv contendo a relação nominal da spp e os 
-        nomes na 4a coluna de um arquivo csv contendo a relação de 
-        efetivo fornecida pela s1
+        Programa que faz a comparação entre os cpfs de um arquivo
+        csv contendo a relação nominal da spp e os cpfs de um 
+        arquivo csv contendo a relação de efetivo fornecida pela 
+        s1 e salva os nomes correspondentes aos cpfs comparados
         
         Opções:
             -o      Imprime para arquivo txt com nome fornecido
@@ -95,31 +95,51 @@ def main(argv):
         
     spp = args[0]
     s1 = args[1]
-    sppnames = set()
-    s1names = set()
 
     try:
-        with open(spp, 'r') as sppfile:
-            reader = csv.reader(sppfile)
-            for value in reader:
-                sppnames.add(unidecode(value[2].upper()))
+        reader = pd.read_csv(spp)
+        spp_cpf_nome = reader[['CPF', 'Nome']]
                 
     except IOError:
         print('erro de leitura no arquivo spp')
         return 3
         
     try:
-        with open(s1, 'r') as s1file:
-            reader = csv.reader(s1file)
-            for value in reader:
-                s1names.add(unidecode(value[3].upper()))
+        reader = pd.read_csv(s1)
+        s1_cpf_nome = reader[['CPF', 'NOME']]
                 
     except IOError:
         print('erro de leitura no arquivo s1')
         return 3
+    
+    cpfs1 = []
+    cpfspp = []
+    nomes1 = []
+    nomespp = []
+    
+    for cpf in spp_cpf_nome['CPF']:
+        cpfspp.append(cpf)
+    
+    for cpf in s1_cpf_nome['CPF']:
+        cpfs1.append(cpf)
+    
+    for nome in spp_cpf_nome['Nome']:
+        nomes1.append(nome)
         
-    in_spp_not_s1 = sppnames - s1names
-    in_s1_not_spp = s1names - sppnames
+    for nome in s1_cpf_nome['NOME']:
+        nomespp.append(nome)
+        
+    in_spp_not_s1 = set()
+    in_s1_not_spp = set()
+    
+    for index, cpf_spp in enumerate(cpfspp):
+        if cpf_spp not in cpfs1:
+            in_spp_not_s1.add(nomes1[index])
+
+    for index, cpf_s1 in enumerate(cpfs1):
+        if cpf_s1 not in cpfspp:
+            in_s1_not_spp.add(nomespp[index])
+            
     
     for opt, arg in opts:
         if opt == '-o':
